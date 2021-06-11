@@ -49,3 +49,9 @@ INTERVALO DE HORAS: 8-18
 SEGUINTES MESES: 1,7,12
 DIA DA SEMANA: 1-5
 
+# Historico de comandos
+history
+
+# Procurar ultimos comandos
+ctrl + r
+
