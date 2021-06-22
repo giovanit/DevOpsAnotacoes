@@ -1,4 +1,0 @@
-strace -c -f ls (-c conta as syscalls)
-strace -c -f PID (ver quais são as syscalls mais usadas, onde tem mais erro e onde vale a pena olhar)
-strace -o output -f nomeProcesso (exporta para um arquivo)
-strace -r trace=read,stat -fp númeroProcesso
