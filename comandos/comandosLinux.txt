@@ -1,0 +1,57 @@
+# Permissões
+r w -	r - - 	r - -
+4+2+0	4+0+0	4+0+0
+  6		  4	  	  4
+  
+# Buscar por um pacote
+apt-cache search nomeDoPacote
+
+# Remover completamente o pacote
+apt-get remove --purge nomeDoPacote
+
+# Remover todos os pacotes baixados e que não serão mais usados
+apt-get clean
+
+# Exibe os processo em execução (o www no final mostra a sintaxe inteira do processo)
+ps auxwww
+
+# Substitui o ps aux | grep
+pgrep nomeDoProcesso
+
+# Encontrar arquivos
+find / -iname nomeDoArquivo
+
+# Encontrar por tipo de arquivos ou pasta (f para file, d para diretorio)
+find / -iname nomeDoArquivo -type f
+
+# Encontrar arquivos modificados a mais de 20 dias
+find / -iname nomeDoArquivo -ctime +20
+
+# Buscar comandos digitados 
+ctrl + r nomeDoComando
+
+# Buscar nos logs nos ultimos 1- dias
+journalctl --since "10 days ago"
+
+# Buscar nos logs filtrando por data e hora
+journalctl --since "2021-01-01 01:00:00" --until "2021-01-16 01:00:00"
+
+# Buscar nos logs por serviço
+journalctl -u ssh -f
+
+#Agendar tarefa contrab -e
+MINUTO   HORA   DIA_DO_MES   MES   DIA_DA_SEMANA   COMANDO
+0-59     0-23   1-31         1-12  0-7 (0 DOMINGO) SCRIPT
+
+A CADA 5 MINUTOS: */5
+A CADA 5 HORAS: */5
+INTERVALO DE HORAS: 8-18
+SEGUINTES MESES: 1,7,12
+DIA DA SEMANA: 1-5
+
+# Historico de comandos
+history
+
+# Procurar ultimos comandos
+ctrl + r
+
