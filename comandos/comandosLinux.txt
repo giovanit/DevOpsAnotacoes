@@ -55,3 +55,38 @@ history
 # Procurar ultimos comandos
 ctrl + r
 
+# Buscar nos logs nos ultimos 1- dias
+journalctl --since "10 days ago"
+
+# Buscar nos logs filtrando por data e hora
+journalctl --since "2021-01-01 01:00:00" --until "2021-01-16 01:00:00"
+
+# Buscar nos logs por serviço
+journalctl -u ssh -f
+
+# Reconhecer as maquinas na rede pelo nome
+nano /etc/hosts
+
+# Adicione o nome da maquinaDestino espaço IP
+192.168.1.41 srv01
+
+# Gerando uma chave ssh
+ssh-keygen
+
+# Vai ser informando que o arquivo será salvo em /home/giovani/.ssh/id_rsa
+Enter
+
+# Será solicitado se deseja inserir algum password adicional
+Enter
+
+# Copiar o arquivo id_rsa.pub para as máquinas q deseja conectar
+ssh-copy-id -i ~/.ssh/id_rsa usuarioDestino@IP
+
+# Para conectar ao servidor
+ssh IP ou 
+ssh srv01
+
+# Caso eu já tenha a minha chave (tipo .pem AWS), 
+# esse 2 comandos devem ser inseridos na maquina que vai realizar a conexão
+ssh-agent zsh
+ssh-add chave.pem
