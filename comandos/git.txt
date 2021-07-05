@@ -13,7 +13,7 @@ git status
 git log -3 (ultimos 3 logs)
 git log --graph --decorate
 
-git pull (pegar a ultiam versao do repositorio e baixar para a maquina)
+git pull (pegar a ultima versao do repositorio e baixar para a maquina)
 git rm nomedoarquivo (remove o arquivo do repositorio)
 
 git checkout -b giropops (cria e muda a branch giropops)
