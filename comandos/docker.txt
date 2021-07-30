@@ -1,0 +1,403 @@
+# Instalação
+curl -fsSL https://get.docker.com/ | bash
+
+# Listar os container ativos e inativos
+docker container ls -a
+
+# Criar um container ubuntu com terminal interatividade (-ti)
+docker container run -ti ubuntu
+
+# Criar um container nginx executando em segundo plano (-d) daemon
+docker container -d nginx
+
+# Executar comandos no container
+docker container exec -ti [CONTAINER ID] [COMANDO]
+Ex1: docker container exec -ti 32f4a3sd2 ls /usr/share/nginx/html
+Ex2: docker container exec -ti 32f4a3sd2 bash
+
+# Sair do container sem mata-lo
+Ctrl + p + q
+
+# Conectar novamente no container
+docker container attach [CONTAINER ID]
+
+# Comandos basicos
+docker container start [CONTAINER ID]
+docker container stop [CONTAINER ID]
+docker container restart [CONTAINER ID]
+docker container pause [CONTAINER ID]
+docker container unpause [CONTAINER ID]
+
+# Detalhes do container
+docker container inspect [CONTAINER ID]
+
+# Visualizar os logs
+docker container logs -f [CONTAINER ID]
+
+# Remover container, mesmo em execução
+docker container rm -f [CONTAINER ID]
+
+# Monitoramento dos recursos do container
+docker container stats [CONTAINER ID]
+
+# Monitoramento dos processos do container
+docker container top [CONTAINER ID]
+
+# Limitar a memória em 128M e 1 core de cpu (pode ser usado 0.5 de core, equivale a 50% de 1 core)
+docker container run -d -m 128M --cpus 1 nginx
+
+# Atualiza os valores de um container em execução
+docker container update --memory 64M --cpus 0.4 nginx
+
+#Comando executados dentro do container:
+apt-get update
+apt-get install stress
+stress --cpu 1 --vm-bytes 128M --vm1
+
+# Lista todas as imagens do baixadas
+docker image ls
+
+--------------------------------------------
+### VOLUMES ###
+
+# Volume do tipo bind (compartilha uma unidade do servidor com o container)
+# src= pasta de origem no seridor
+# dst= pasta destino no container (cria automaticamente)
+# Após executar o container, df -h pode ver a unidade compartilhada
+docker container run -ti --mount type=bind,src=/opt/unidade,dst=/unidade ubuntu
+
+# Volume do tipo bind (compartilha uma unidade do servidor com o container)
+# src= pasta de origem no seridor
+# dst= pasta destino no container (cria automaticamente)
+# ro cria como comente leitura no container
+docker container run -ti --mount type=bind,src=/opt/unidade,dst=/unidade,ro ubuntu
+
+# Lista todos os volumes criados
+docker volume ls
+
+# Criar o volume com nome giropops
+docker volume create giropops
+
+# Especificações do volume
+docker volume inspect giropops
+
+# Todos os volumes ficam armazenados no servidor em:
+/var/lib/docker/volumes
+
+# Para criar arquivos dentro do volume, através do servidor, deve ser criado os arquivos em:
+/var/lib/docker/volumes/giropops/_data
+
+# Associando o volume criado ao container
+# src= nome do volume criado
+# dst= pasta destino no container (cria automaticamente)
+docker container run -ti --mount type=volume,src=giropops,dst=/unidade ubuntu
+
+# Deleta o volume
+docker volume rm giropops
+
+# Deleta todos os volumes que não estão sendo utilizados por nenhum container
+docker volume prune
+
+# Cria o container mas não coloca em execução (sintaxe antiga)
+docker create -v /data --name dbdados centos
+
+# Container de uma imagem postgresql (sintaxe antiga)
+# -e de enviriment, para passar variaveis de ambiente para o container
+docker container run -d -p 5432:5432 --name pgsql1 --volumes-from dbdados -e POSTGRESQL_USER=docker -e POSTGRESQL_PASS=docker -e POSTGRESQL_DB=docker kamui/postgresql
+
+# Criar volume (sempre com essa sintaxe)
+docker volume create dbdados
+
+# Container de uma imagem postgresql (sempre com essa sintaxe)
+docker container run -d -p 5432:5432 --name pgsql1 --mount type=volume,src=dbdados,dst=/data -e POSTGRESQL_USER=docker -e POSTGRESQL_PASS=docker -e POSTGRESQL_DB=docker kamui/postgresql
+
+# Montando um diretorio de backup para a pasta data do container
+# tar -cvf /backup/bkp-banco.tar /data comando para empacotar os arquivos da pasta data
+docker container run -ti --mount type=volume,src=dbdados,dst=/data --mount type=bind,src=/opt/backup,dst=/backup debian tar -cvf /backup/bkp-banco.tar /data
+
+--------------------------------------------
+### DOCKFILE ###
+
+# Criando o arquivo dockerfile
+nano Dockerfile
+
+# Conteudo
+FROM debian
+
+RUN apt-get update && apt-get install -y apache2
+ENV APACHE_LOCK_DIR="/var/lock"
+ENV APACHE_PID_FILE="/var/run/apache2.pid"
+ENV APACHE_RUN_USER="www-data"
+ENV APACHE_RUN_GROUP="www-data"
+ENV APACHE_LOG_DIR="/var/log/apache2"
+
+ADD index.html /var/www/html/
+
+LABEL description="Webserver"
+LABEL version="1.0.0"
+
+USER root
+
+WORKDIR /var/www/html/
+
+VOLUME /var/www/html/
+EXPOSE 80
+
+ENTRYPOINT ["/usr/sbin/apachectl"]
+# Para rodar em primeiro plano (obrigatorio roda em primeiro plano)
+CMD ["-D", "FOREGROUND"]
+
+# Descrição do Dockerfile
+ADD => Copia novos arquivos, diretórios, arquivos TAR ou arquivos remotos e os adicionam ao filesystem do container;
+CMD => Executa um comando, diferente do RUN que executa o comando no momento em que está "buildando" a imagem, o CMD executa no início da execução do container;
+LABEL => Adiciona metadados a imagem como versão, descrição e fabricante;
+COPY => Copia novos arquivos e diretórios e os adicionam ao filesystem do container;
+ENTRYPOINT => Permite você configurar um container para rodar um executável, e quando esse executável for finalizado, o container também será;
+ENV => Informa variáveis de ambiente ao container;
+EXPOSE => Informa qual porta o container estará ouvindo;
+FROM => Indica qual imagem será utilizada como base, ela precisa ser a primeira linha do Dockerfile;
+MAINTAINER => Autor da imagem; 
+RUN => Executa qualquer comando em uma nova camada no topo da imagem e "commita" as alterações. Essas alterações você poderá utilizar nas próximas instruções de seu Dockerfile;
+USER => Determina qual o usuário será utilizado na imagem. Por default é o root;
+VOLUME => Permite a criação de um ponto de montagem no container;
+WORKDIR => Responsável por mudar do diretório / (raiz) para o especificado nele;
+
+# Executando o Dockerfile (não esquecer do . no final para informar o diretorio atual)
+docker image build -t meu_apache:1.0.0 .
+
+# Iniciando o container criado
+docker container run -d -p 8080:80 meu_apache:1.0.0
+
+### Dockerhub ###
+
+# Login no dockerhub
+docker login
+
+# Preparando a imagem
+docker image tag 6b124f492e2a giovanit/meu_apache:2.0.0
+
+# Enviando a imagem para o dockerhub
+docker push giovanit/meu_apache:2.0.0
+
+# Baixar image do dockerhub
+docker pull giovanit/meu_apache
+
+# Criando um repositorio local (na empresa)
+# Logout do dockerhub
+docker logout
+
+# Container para repositorio local (--restart=always para o container reiniciar caso ocorra algum problema)
+docker container run -d -p 5000:5000 --restart=always --name registry registry:2
+
+# Criando a tag da imagem
+docker tag IMAGEMID localhost:5000/meu_apache:1.0.0
+
+# Enviando a imagem para o registry (repositorio local)
+docker image push localhost:5000/meu_apache:1.0.0
+
+# Rodar a imagem que está no repositorio local
+docker container run -d localhost:5000/meu_apache:1.0.0
+
+--------------------------------------------
+### Docker Machine ###
+
+https://docs.docker.com/machine/drivers/
+
+# Download do docker machine
+https://github.com/docker/machine/releases
+
+# Verificando os comandos
+docker-machine.exe --help
+
+# Criando uma VM
+docker-machine create --driver virtualbox docker2
+
+# Acesso ssh
+docker-machine ssh docker2
+
+# Variaveis de ambiente da vm
+docker-machine env docker2
+
+# Importando as variáveis da vm para o meu desktop
+# Com esse comando não é necessario acessar a vm para executar os comandos do docker
+# Todos os comandos executados no desktop são enviados remotamente para vm
+# Para linux
+eval $(docker-machine env docker2)
+
+# Teste de comando no meu desktop
+docker container ls
+
+# Retirar as variaveis de ambiente 
+docker-machine env -u
+eval $(docker-machine env -u)
+
+--------------------------------------------
+### Docker swarm ###
+
+# Comandos
+docker swarm --help
+
+# Instalar o docker em todas as máquinas
+curl -fsSL https://get.docker.com/ | bash
+
+# Inicializar o swarm
+docker swarm init
+
+# Com o comando gerado anteriormente é gerando um token q deve ser executado nas outras maquinas
+ docker swarm join --token SWMTKN-1-52ws2s65299iioz94fpe79g7dpcr15xhvspx9cv4etqh9qarwm-7uuzeemyxf6g0n6jya6mn2592 192.168.1.40:2377
+
+# Listar os nodes
+docker node ls
+
+# Promover um node a manager, fazer isso em todos (caso o leader fique off outro assume)
+docker node promote srvdocker2
+
+# Retirar um node de leader
+docker node demote srvdocker2
+
+# Retirar um node de manager
+# docker swarm leave --force
+
+# Descobrir o token de manager
+docker swarm join-token manager
+
+# Descobrir o token de worker
+docker swarm join-token worker
+
+# Alterar a hash do token (nodes online não precisa efetuar a alteração, somente para os novos)
+docker swarm join-token --rotate manager
+docker swarm join-token --rotate worker
+
+# Comandos usados com service
+docker service --help
+
+# Criando um servico chamado webserver do nginx com 3 replicas
+docker service create --name webserver --replicas 3 -p 8080:80 nginx
+
+# Pausar um node de receber container
+docker node update --availability pause srvdocker2
+
+# Ativar novamente o node
+docker node update --availability active srvdocker2
+
+# Escala entre os 3 nodes 10 webserver
+docker service scale webserver=10 
+
+# Lista todos os serviços
+docker service ls
+
+# Verificar a distribuição do serviço
+docker service ps webserver
+
+# Desativa todos os services do srvdocker2 e redistribui entre os outros
+docker node update --availability drain srvdocker2
+
+# Ativar novamente o node 
+docker node update --availability active srvdocker2
+
+# Remover o service webserver
+docker service rm webserver
+
+# Para criar um volume compatilhado é recomendado utilizar o ceph https://ceph.com/en/
+# Para laboratorio seguir os seguintes passos
+# No srv
+apt-get install nfs-server
+nano /etc/exports
+# Adicionar a seguinte linha
+/opt/site *(rw,sync,subtree_check)
+
+mkdir -p /opt/site/_data
+echo "GIOVANI TOGNON" > /opt/site/_data/index.html
+docker volume create giropops
+rm -rf /var/lib/docker/volumes/giropops/_data/
+ln -s /opt/site/_data /var/lib/docker/volumes/giropops/_data/
+exportfs -ar
+
+# Nos outros nodes
+apt-get install nfs-common
+showmount -e IPdoSrvMaster
+mount IPdoSrvMaster:/opt/site /var/lib/docker/volumes/giropops/
+
+# Criando o service com o volume criado
+docker service create --name webserver --replicas 3 -p 8080:80 --mount type=volume,src=giropops,dst=/usr/share/nginx/html/ nginx
+
+# Adicionando um volume em um service já criado
+docker service update --mount-add type=volume,src=nomeDoVolume,dst=/usr/share/nginx/html/ nomeDoService
+
+# Todos os comandos da opcao create
+docker service create --help
+
+# Exemplo de comandos com hostname do container, limite de memoria, variáveis de ambiente, dns
+docker service create --name webserver --replicas 3 -p 8080:80 --mount type=volume,src=giropops,dst=/usr/share/nginx/html/ --hostname srvnginx --limit-memory 64M --env giovani=lindo --dns 8.8.8.8 nginx
+
+# Acessando o container
+docker container exec -ti IDCOTAINER bash
+
+# Criando uma rede do tipo overlay (todos dentro dessa rede podem se conversar)
+docker network create -d overlay giropopsnet
+
+# Listar as redes
+docker network ls
+
+# Criando o service vinculando a rede
+docker service create --name nginx1 -p 8080:80 --network giropopsnet nginx
+docker service create --name nginx2 -p 8088:80 --network giropopsnet nginx
+
+# Adicionando uma network a um service
+docker service update --network-add giropopsnet nginx3
+
+# Bindar uma porta do host em um service em execução
+docker service update --publish-add 8080:80 nomeDoService
+
+--------------------------------------------
+### Secrets ###
+
+# Criar uma secret
+docker secret create nomeDaSecret senha.txt
+
+# Listar as secret
+docker secret ls
+
+# Inspecionar a secret
+docker inspect nomeDaSecret
+
+# Adicionando o secret ao container
+docker service create --name nginx -p 8080:80 --secret nomeDaSecret nginx
+
+# Caminho do secret no container
+/run/secrets
+
+# Adicionar um secret a um service
+docker service update --secret-add nomeDaSecret
+
+# Remover um secret de um service
+docker service update --secret-rm nomeDaSecret
+
+# Adicionando o nome do arquivo, permissão de usuário, grupo e leitura do arquivo
+docker service create --name nginx -p 8080:80 --secret src=nomeDaSecret,target=minha-senha,uid=usuario,gid=grupo,mode=0400 nginx
+
+--------------------------------------------
+### Compose, Stack e Services ###
+
+# Comandos do docker stacks
+docker stacks --help
+
+# Criar arquivo docker-compose.yml
+# Adcionar os dados para o container
+# Executar o arquivo docker-compose.yml, -c (compose file), nome da stack
+docker stack deploy -c docker-compose.yml giropops
+
+# Services da stack giropops
+docker stack services giropops
+
+# Mostra onde estão rodandos os containers
+docker stack ps giropops
+
+# Remover a stack
+docker stack rm giropops
+
+- Remove todos os containers
+docker stop $(docker ps -a -q) # Para containers
+docker rm $(sudo docker ps -a -q) # Remove containers
+docker rmi -f $( sudo docker images -q ) # Remove imagens
+docker volume rm $(sudo docker volume ls -q -f dangling=true) # Remove volumes
