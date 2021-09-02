@@ -401,3 +401,130 @@ docker stop $(docker ps -a -q) # Para containers
 docker rm $(sudo docker ps -a -q) # Remove containers
 docker rmi -f $( sudo docker images -q ) # Remove imagens
 docker volume rm $(sudo docker volume ls -q -f dangling=true) # Remove volumes
+
+--------------------------------------------
+### Traefik ###
+
+# Instalar o docker em todas as máquinas
+curl -fsSL https://get.docker.com/ | bash
+
+# Inicializar o swarm
+docker swarm init
+
+# Com o comando gerado anteriormente é gerando um token q deve ser executado nas outras maquinas
+ docker swarm join --token SWMTKN-1-52ws2s65299iioz94fpe79g7dpcr15xhvspx9cv4etqh9qarwm-7uuzeemyxf6g0n6jya6mn2592 192.168.1.40:2377
+
+# Promover um node a manager, fazer isso em todos (caso o leader fique off outro assume)
+docker node promote srvdocker2
+
+# Listar os nodes
+docker node ls
+
+# Criação de um rede publica para direcionar para a internet 
+docker network create --driver=overlay traefik-public
+
+# Criar o arquivo do traefik
+nano traefik_deploy.yaml
+
+version: '3'
+
+services:
+  reverse-proxy:
+    image: traefik:v2.0.2
+    labels:
+	# Redirect 80 para 443
+    - "traefik.enable=true"
+    - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+    - "traefik.http.routers.http-catchall.entrypoints=web"
+    - "traefik.http.routers.http-catchall.middlewares=redirect-to-https@docker"
+    - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+    command:
+      - "--providers.docker.endpoint=unix:///var/run/docker.sock"
+      - "--providers.docker.swarmMode=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=traefik-public"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencryptresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencryptresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.letsencryptresolver.acme.email=jeferson@linuxtips.com.br"
+      - "--certificatesresolvers.letsencryptresolver.acme.storage=/letsencrypt/acme.json"
+      - "--api.insecure"
+      - "--api.dashboard=true"
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-certificates:/letsencrypt
+    networks:
+      - traefik-public
+    deploy:
+      placement:
+        constraints:
+		# Só funcionar em nó manager
+          - node.role == manager
+
+volumes:
+  traefik-certificates:
+
+networks:
+  traefik-public:
+    external: true
+
+# Deploy do traefik deploy
+docker stack deploy traefik -c traefik_deploy.yaml
+
+# Listar os serviços rodando
+docker service ls
+
+# Criando a aplicação loja
+nano app_example.yaml
+
+version: '3'
+services:
+  loja:
+    image: linuxtips/nginx-prometheus-exporter:1.0.0
+    networks:
+     - traefik-public
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.loja.rule=Host(`loja.biqueiranerd.com.br`)"
+        - "traefik.http.routers.loja.entrypoints=websecure"
+        - "traefik.http.routers.loja.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.loja.loadbalancer.server.port=80"
+networks:
+  traefik-public:
+    external: true
+
+# Deploy da aplicação
+docker stack deploy loja -c app_example.yaml
+
+# Criando a aplicação store
+nano app2_example.yaml
+
+version: '3'
+services:
+  store:
+    image: linuxtips/nginx-prometheus-exporter:2.0.0
+    networks:
+     - traefik-public
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.store.rule=Host(`store.biqueiranerd.com.br`)"
+        - "traefik.http.routers.store.entrypoints=websecure"
+        - "traefik.http.routers.store.tls.certresolver=letsencryptresolver"
+        - "traefik.http.services.store.loadbalancer.server.port=80"
+networks:
+  traefik-public:
+    external: true
+
+# Deploy da aplicação
+docker stack deploy store -c app2_example.yaml
+
+# Atualizar um service
+docker stack deploy traefik -c traefik_deploy_https.yaml
