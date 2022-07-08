@@ -90,3 +90,40 @@ ssh srv01
 # esse 2 comandos devem ser inseridos na maquina que vai realizar a conexão
 ssh-agent zsh
 ssh-add chave.pem
+
+#Criar uma variável local e atribuir valor
+teste='99'
+
+#Mostrar o conteúdo da variável criada
+echo $teste
+
+#Criar uma variável global
+export teste
+
+#Arrays de ambiente
+testearray=(ubuntu debian kali)
+
+#Acessar um elemento no array, use seu número de índice, a partir de zero
+echo ${testearray[1]}
+
+#Acessar todos os elementos no array
+echo ${testearray[*]}
+
+#Adicionar um novo elemento
+testearray[3]=centos
+
+#Remover um elemento do array
+unset testearray[2]
+
+#Remover todo o conteúdo
+unset testearray[*]
+
+#Grava a informação dentro do arquivo log, sobresquevendo toda vez q executado
+ls -lha /home/ubuntu > log
+
+#Grava a informação dentro do arquivo log, adicionando ao final toda vez q executado
+ls -lha /home/ubuntu >> log
+
+#Grava a informação dentro do arquivo log, criando um novo arquivo log com a data toda vez q executado
+arq=`date +%d%m%y%H%M`
+ls -lha /home/ubuntu > log.$arq
